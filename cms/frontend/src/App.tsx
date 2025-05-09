@@ -13,6 +13,7 @@ import SecurityInterface from './pages/SecurityInterface';
 import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -24,8 +25,8 @@ function App() {
 
           {/* Protected route for authenticated users */}
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route path="/" element={<Dashboard />} /> {/* Default Dashboard */}
-            <Route path="/dashboard" element={<Dashboard />} /> {/* Resident Dashboard */}
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/visitors" element={<VisitorManagement />} />
             <Route path="/complaints" element={<ComplaintManagement />} />
             <Route path="/announcements" element={<Announcements />} />
@@ -34,6 +35,7 @@ function App() {
             <Route path="/vehicles" element={<VehicleManagement />} />
             <Route path="/security" element={<SecurityInterface />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
         </Routes>
       </AuthProvider>

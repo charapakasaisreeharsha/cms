@@ -17,6 +17,9 @@ const NewAnnouncement: React.FC = () => {
         body: JSON.stringify({ title, content, priority })
       });
       
+    // Dispatch event to notify dashboard of new announcement
+    window.dispatchEvent(new Event('announcementAdded'));
+
     nav('/announcements');
   };
 

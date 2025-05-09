@@ -10,8 +10,7 @@ import {
   Car, 
   Shield, 
   BarChart,
-  Calendar,
-  Settings
+  Calendar
 } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
@@ -120,12 +119,7 @@ const Sidebar: React.FC = () => {
         </nav>
       </div>
       
-      <div className="p-4 border-t border-gray-200">
-        <NavLink to="/settings" className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-primary/10 hover:text-primary">
-          <Settings className="w-5 h-5 mr-3" />
-          Settings
-        </NavLink>
-      </div>
+      {/* Removed Settings NavLink from sidebar */}
     </div>
   );
 };

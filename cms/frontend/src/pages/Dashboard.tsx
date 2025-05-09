@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Card from '../components/common/Card';
 import ActionTile from '../components/common/ActionTile';
@@ -13,34 +13,114 @@ import {
   Home,
   Sparkles
 } from 'lucide-react';
+import axios from 'axios';
+
+interface Announcement {
+  id: number;
+  title: string;
+  content: string;
+  date: string | null;
+  priority: 'low' | 'medium' | 'high';
+}
+
+interface Notification {
+  id: number;
+  title: string;
+  description: string;
+  timestamp: number; // Unix timestamp for sorting
+  type: 'event' | 'maintenance' | 'payment' | 'announcement';
+}
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const [openComplaintsCount, setOpenComplaintsCount] = useState(0);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [newAnnouncementIds, setNewAnnouncementIds] = useState<Set<number>>(new Set());
 
-  // Recent notifications
-  const notifications = [
+  const fetchOpenComplaintsCount = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_BACKEND_API_URL.replace('/auth', '');
+      const response = await axios.get(`${apiUrl}/complaints?status=open`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('societyToken')}` },
+      });
+      setOpenComplaintsCount(response.data.length);
+    } catch (error) {
+      console.error('Failed to fetch open complaints count:', error);
+    }
+  };
+
+  const fetchAnnouncements = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/announcements');
+      const data: Announcement[] = await res.json();
+      setAnnouncements(data);
+    } catch (err) {
+      console.error('Failed to load announcements', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOpenComplaintsCount();
+    fetchAnnouncements();
+
+    const handleComplaintUpdate = () => {
+      fetchOpenComplaintsCount();
+    };
+
+    const handleAnnouncementAdded = () => {
+      fetchAnnouncements();
+      // Clear newAnnouncementIds to force timestamp override for all announcements without date
+      setNewAnnouncementIds(new Set());
+    };
+
+    window.addEventListener('complaintUpdated', handleComplaintUpdate);
+    window.addEventListener('announcementAdded', handleAnnouncementAdded);
+
+    return () => {
+      window.removeEventListener('complaintUpdated', handleComplaintUpdate);
+      window.removeEventListener('announcementAdded', handleAnnouncementAdded);
+    };
+  }, []);
+
+  // Recent notifications from static and dynamic sources
+  const staticNotifications: Notification[] = [
     {
       id: 1,
       title: 'Community Meeting',
       description: 'Monthly community meeting this Sunday at 10:00 AM.',
-      date: 'Today',
+      timestamp: Date.now() - 3600 * 1000, // 1 hour ago
       type: 'event'
     },
     {
       id: 2,
       title: 'Maintenance Notice',
       description: 'Water supply will be interrupted tomorrow from 10:00 AM to 2:00 PM due to maintenance.',
-      date: 'Yesterday',
+      timestamp: Date.now() - 24 * 3600 * 1000, // 1 day ago
       type: 'maintenance'
     },
     {
       id: 3,
       title: 'New Payment',
       description: 'Your maintenance payment for August has been received.',
-      date: '3 days ago',
+      timestamp: Date.now() - 3 * 24 * 3600 * 1000, // 3 days ago
       type: 'payment'
     }
   ];
+
+  // Map announcements to notification format
+  const announcementNotifications: Notification[] = announcements.map((a) => ({
+    id: 1000 + a.id, // offset id to avoid collision
+    title: a.title,
+    description: a.content,
+    timestamp: a.date ? new Date(a.date).getTime() : Date.now(),
+    type: 'announcement',
+  }));
+
+  // Combine notifications
+  let notifications: Notification[] = [...announcementNotifications, ...staticNotifications];
+
+  // Sort notifications by timestamp descending
+  notifications = notifications.sort((a, b) => b.timestamp - a.timestamp);
 
   // Quick stats
   const stats = [
@@ -58,7 +138,7 @@ const Dashboard: React.FC = () => {
     },
     {
       label: 'Open Complaints',
-      value: '1',
+      value: openComplaintsCount.toString(),
       icon: AlertCircle,
       color: 'text-amber-500'
     }
@@ -140,11 +220,14 @@ const Dashboard: React.FC = () => {
               {notification.type === 'payment' && (
                 <CreditCard className="w-6 h-6 text-green-500" />
               )}
+              {notification.type === 'announcement' && (
+                <Bell className="w-6 h-6 text-purple-500" />
+              )}
             </div>
             <div className="flex-1">
               <div className="flex justify-between">
                 <h3 className="font-medium text-gray-800">{notification.title}</h3>
-                <span className="text-xs text-gray-500">{notification.date}</span>
+                <span className="text-xs text-gray-500">{new Date(notification.timestamp).toLocaleDateString()}</span>
               </div>
               <p className="mt-1 text-sm text-gray-600">{notification.description}</p>
             </div>

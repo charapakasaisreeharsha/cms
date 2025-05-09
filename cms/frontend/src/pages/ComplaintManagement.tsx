@@ -105,145 +105,148 @@ const ComplaintManagement: React.FC = () => {
     return matchesSearch && matchesPriority && matchesDate;
   });
 
-  const handleNewComplaintSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+const handleNewComplaintSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
 
-    if (!newComplaint.title || !newComplaint.description) {
-      setError('Title and description are required');
-      return;
-    }
+  if (!newComplaint.title || !newComplaint.description) {
+    setError('Title and description are required');
+    return;
+  }
 
-    try {
-      const apiUrl = import.meta.env.VITE_BACKEND_API_URL.replace('/auth', '');
-      const response = await axios.post(
-        `${apiUrl}/complaints`,
-        {
-          title: newComplaint.title,
-          description: newComplaint.description,
-          priority: newComplaint.priority,
+  try {
+    const apiUrl = import.meta.env.VITE_BACKEND_API_URL.replace('/auth', '');
+    const response = await axios.post(
+      apiUrl + '/complaints',
+      {
+        title: newComplaint.title,
+        description: newComplaint.description,
+        priority: newComplaint.priority,
+      },
+      {
+        headers: {
+          Authorization: 'Bearer ' + localStorage.getItem('societyToken'),
         },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('societyToken')}`,
-          },
-        }
-      );
+      }
+    );
 
-      const newComplaintData: Complaint = {
-        id: response.data.id,
-        user_id: response.data.user_id,
-        title: response.data.title,
-        description: response.data.description,
-        status: response.data.status,
-        date: response.data.date,
-        unit: response.data.unit || '',
-        priority: response.data.priority,
-        resolution_description: response.data.resolution_description,
-        resolved_by: response.data.resolved_by,
-      };
+    const newComplaintData: Complaint = {
+      id: response.data.id,
+      user_id: response.data.user_id,
+      title: response.data.title,
+      description: response.data.description,
+      status: response.data.status,
+      date: response.data.date,
+      unit: response.data.unit || '',
+      priority: response.data.priority,
+      resolution_description: response.data.resolution_description,
+      resolved_by: response.data.resolved_by,
+    };
 
-      setComplaints([newComplaintData, ...complaints]);
-      setNewComplaint({ title: '', description: '', priority: 'medium' });
-      setShowNewModal(false);
-    } catch (err: any) {
-      console.error('Error creating complaint:', err);
-      setError(err.response?.data?.error || 'Failed to create complaint');
-    }
-  };
+    setComplaints([newComplaintData, ...complaints]);
+    setNewComplaint({ title: '', description: '', priority: 'medium' });
+    setShowNewModal(false);
+
+    // Dispatch event to notify dashboard to update open complaints count
+    window.dispatchEvent(new Event('complaintUpdated'));
+  } catch (err: any) {
+    console.error('Error creating complaint:', err);
+    setError(err.response?.data?.error || 'Failed to create complaint');
+  }
+};
 
   const handleEditComplaintSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!editComplaint.title || !editComplaint.description) {
-      setError('Title and description are required');
-      return;
+if (!editComplaint.title || !editComplaint.description) {
+  setError('Title and description are required');
+  return;
+}
+
+try {
+  const apiUrl = import.meta.env.VITE_BACKEND_API_URL.replace('/auth', '');
+  const response = await axios.put(
+    apiUrl + '/complaints/' + selectedComplaint?.id,
+    {
+      title: editComplaint.title,
+      description: editComplaint.description,
+      priority: editComplaint.priority,
+    },
+    {
+      headers: {
+        Authorization: 'Bearer ' + localStorage.getItem('societyToken'),
+      },
     }
+  );
 
-    try {
-      const apiUrl = import.meta.env.VITE_BACKEND_API_URL.replace('/auth', '');
-      const response = await axios.put(
-        `${apiUrl}/complaints/${selectedComplaint?.id}`,
-        {
-          title: editComplaint.title,
-          description: editComplaint.description,
-          priority: editComplaint.priority,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('societyToken')}`,
-          },
-        }
-      );
+  const updatedComplaint: Complaint = {
+    id: response.data.id,
+    user_id: response.data.user_id,
+    title: response.data.title,
+    description: response.data.description,
+    status: response.data.status,
+    date: response.data.date,
+    unit: response.data.unit || '',
+    priority: response.data.priority,
+    resolution_description: response.data.resolution_description,
+    resolved_by: response.data.resolved_by,
+  };
 
-      const updatedComplaint: Complaint = {
-        id: response.data.id,
-        user_id: response.data.user_id,
-        title: response.data.title,
-        description: response.data.description,
-        status: response.data.status,
-        date: response.data.date,
-        unit: response.data.unit || '',
-        priority: response.data.priority,
-        resolution_description: response.data.resolution_description,
-        resolved_by: response.data.resolved_by,
-      };
-
-      setComplaints(complaints.map((c) => (c.id === updatedComplaint.id ? updatedComplaint : c)));
-      setEditComplaint({ title: '', description: '', priority: 'medium' });
-      setShowEditModal(false);
-      setSelectedComplaint(null);
-    } catch (err: any) {
-      console.error('Error updating complaint:', err);
-      setError(err.response?.data?.error || 'Failed to update complaint');
-    }
+  setComplaints(complaints.map((c) => (c.id === updatedComplaint.id ? updatedComplaint : c)));
+  setEditComplaint({ title: '', description: '', priority: 'medium' });
+  setShowEditModal(false);
+  setSelectedComplaint(null);
+} catch (err: any) {
+  console.error('Error updating complaint:', err);
+  setError(err.response?.data?.error || 'Failed to update complaint');
+}
   };
 
   const handleResolveComplaintSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!resolveDescription) {
-      setError('Resolution description is required');
-      return;
+if (!resolveDescription) {
+  setError('Resolution description is required');
+  return;
+}
+
+try {
+  const apiUrl = import.meta.env.VITE_BACKEND_API_URL.replace('/auth', '');
+  const response = await axios.put(
+    apiUrl + '/complaints/' + selectedComplaint?.id + '/resolve',
+    {
+      resolution_description: resolveDescription,
+    },
+    {
+      headers: {
+        Authorization: 'Bearer ' + localStorage.getItem('societyToken'),
+      },
     }
+  );
 
-    try {
-      const apiUrl = import.meta.env.VITE_BACKEND_API_URL.replace('/auth', '');
-      const response = await axios.put(
-        `${apiUrl}/complaints/${selectedComplaint?.id}/resolve`,
-        {
-          resolution_description: resolveDescription,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('societyToken')}`,
-          },
-        }
-      );
+  const updatedComplaint: Complaint = {
+    id: response.data.id,
+    user_id: response.data.user_id,
+    title: response.data.title,
+    description: response.data.description,
+    status: response.data.status,
+    date: response.data.date,
+    unit: response.data.unit || '',
+    priority: response.data.priority,
+    resolution_description: response.data.resolution_description,
+    resolved_by: response.data.resolved_by,
+  };
 
-      const updatedComplaint: Complaint = {
-        id: response.data.id,
-        user_id: response.data.user_id,
-        title: response.data.title,
-        description: response.data.description,
-        status: response.data.status,
-        date: response.data.date,
-        unit: response.data.unit || '',
-        priority: response.data.priority,
-        resolution_description: response.data.resolution_description,
-        resolved_by: response.data.resolved_by,
-      };
-
-      setComplaints(complaints.map((c) => (c.id === updatedComplaint.id ? updatedComplaint : c)));
-      setResolveDescription('');
-      setShowResolveModal(false);
-      setSelectedComplaint(null);
-    } catch (err: any) {
-      console.error('Error resolving complaint:', err);
-      setError(err.response?.data?.error || 'Failed to resolve complaint');
-    }
+  setComplaints(complaints.map((c) => (c.id === updatedComplaint.id ? updatedComplaint : c)));
+  setResolveDescription('');
+  setShowResolveModal(false);
+  setSelectedComplaint(null);
+} catch (err: any) {
+  console.error('Error resolving complaint:', err);
+  setError(err.response?.data?.error || 'Failed to resolve complaint');
+}
   };
 
   const handleViewClick = (complaint: Complaint) => {
@@ -426,32 +429,32 @@ const ComplaintManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleViewClick(complaint)}
-                        >
-                          View
-                        </Button>
+<Button
+  size="sm"
+  variant="text"
+  onClick={() => handleViewClick(complaint)}
+>
+  View
+</Button>
                         {!isAdmin && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEditClick(complaint)}
-                            disabled={complaint.status === 'resolved'}
-                          >
-                            Edit
-                          </Button>
+<Button
+  size="sm"
+  variant="text"
+  onClick={() => handleEditClick(complaint)}
+  disabled={complaint.status === 'resolved'}
+>
+  Edit
+</Button>
                         )}
-                        {(isAdmin || complaint.user_id === userId) && complaint.status !== 'resolved' && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleResolveClick(complaint)}
-                          >
-                            Mark as Resolved
-                          </Button>
-                        )}
+{(isAdmin || complaint.user_id?.toString() === userId?.toString()) && complaint.status !== 'resolved' && (
+  <Button
+    size="sm"
+    variant="text"
+    onClick={() => handleResolveClick(complaint)}
+  >
+    Mark as Resolved
+  </Button>
+)}
                       </div>
                     </td>
                   </tr>
@@ -571,24 +574,24 @@ const ComplaintManagement: React.FC = () => {
                   {selectedComplaint.priority}
                 </span>
               </div>
-              {selectedComplaint.status === 'resolved' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Resolution Description</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedComplaint.resolution_description || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Resolved By (User ID)</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedComplaint.resolved_by || 'N/A'}</p>
-                  </div>
-                </>
-              )}
+{selectedComplaint.status === 'resolved' && (
+  <>
+    <div>
+      <label className="block text-sm font-medium text-gray-700">Resolution Description</label>
+      <p className="mt-1 text-sm text-gray-900">{selectedComplaint.resolution_description || 'N/A'}</p>
+    </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700">Resolved By (User ID)</label>
+      <p className="mt-1 text-sm text-gray-900">{selectedComplaint.resolved_by?.toString() || 'N/A'}</p>
+    </div>
+  </>
+)}
               <div className="flex justify-end space-x-2">
-                {(isAdmin || selectedComplaint.user_id === userId) && selectedComplaint.status !== 'resolved' && (
-                  <Button onClick={() => handleResolveClick(selectedComplaint)}>
-                    Mark as Resolved
-                  </Button>
-                )}
+{(isAdmin || selectedComplaint.user_id?.toString() === userId?.toString()) && selectedComplaint.status !== 'resolved' && (
+  <Button onClick={() => handleResolveClick(selectedComplaint)}>
+    Mark as Resolved
+  </Button>
+)}
                 <Button onClick={() => setShowViewModal(false)}>Close</Button>
               </div>
             </div>

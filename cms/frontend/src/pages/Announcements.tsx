@@ -4,6 +4,7 @@ import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Megaphone, Edit, Trash2 } from 'lucide-react';
+import axios from 'axios';
 
 interface Announcement {
   id: number;
@@ -48,6 +49,24 @@ const Announcements: React.FC = () => {
         return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Delete announcement function
+  const deleteAnnouncement = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this announcement?')) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('societyToken');
+      const apiUrl = import.meta.env.VITE_BACKEND_API_URL.replace('/auth', '');
+      await axios.delete(`${apiUrl}/announcements/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAnnouncements(prev => prev.filter(a => a.id !== id));
+    } catch (error) {
+      console.error('Failed to delete announcement', error);
+      alert('Failed to delete announcement. Please try again.');
     }
   };
 
@@ -131,7 +150,10 @@ const Announcements: React.FC = () => {
                     <button className="p-1 hover:bg-gray-100 rounded">
                       <Edit className="w-4 h-4 text-gray-600" />
                     </button>
-                    <button className="p-1 hover:bg-gray-100 rounded">
+                    <button
+                      className="p-1 hover:bg-gray-100 rounded"
+                      onClick={() => deleteAnnouncement(announcement.id)}
+                    >
                       <Trash2 className="w-4 h-4 text-red-600" />
                     </button>
                   </div>
