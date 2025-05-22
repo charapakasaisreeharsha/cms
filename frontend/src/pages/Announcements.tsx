@@ -1,3 +1,4 @@
+// Announcements.tsx
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -7,8 +8,7 @@ import { Megaphone, Edit, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-// Construct the API base URL correctly
-const apiBase = `${import.meta.env.VITE_BACKEND_API_URL}/api/announcements`;
+const apiBase = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:5000/api';
 console.log('Using API base:', apiBase);
 
 interface Announcement {
@@ -35,20 +35,29 @@ const Announcements: React.FC = () => {
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
-        const res = await axios.get<Announcement[]>(apiBase);
-        setAnnouncements(res.data);
+        const token = localStorage.getItem('societyToken');
+        if (!token) throw new Error('No token found');
+        const res = await axios.get<Announcement[]>(`${apiBase}/announcements?limit=10`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setAnnouncements(Array.isArray(res.data) ? res.data : []);
       } catch (err: any) {
-        console.error('Failed to load announcements', err);
+        console.error('Failed to load announcements:', err);
+        if (axios.isAxiosError(err) && (err.response?.status === 401 || err.response?.status === 403)) {
+          localStorage.removeItem('societyToken');
+          nav('/login');
+        }
         alert(
           err.response?.data?.error ||
             `Failed to load announcements: ${err.message}`
         );
+        setAnnouncements([]);
       } finally {
         setLoading(false);
       }
     };
     fetchAnnouncements();
-  }, []);
+  }, [nav]);
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -67,13 +76,13 @@ const Announcements: React.FC = () => {
     if (!window.confirm('Are you sure?')) return;
     try {
       const token = localStorage.getItem('societyToken');
-      await axios.delete(`${apiBase}/${id}`, {
+      await axios.delete(`${apiBase}/announcements/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setAnnouncements((prev) => prev.filter((a) => a.id !== id));
       alert('Announcement deleted.');
     } catch (err: any) {
-      console.error('Delete failed', err);
+      console.error('Delete failed:', err);
       alert(err.response?.data?.error || err.message);
     }
   };
@@ -102,7 +111,7 @@ const Announcements: React.FC = () => {
       const { id, title, content, priority } = editData;
       const token = localStorage.getItem('societyToken');
       const res = await axios.put<Announcement>(
-        `${apiBase}/${id}`,
+        `${apiBase}/announcements/${id}`,
         { title, content, priority },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -112,7 +121,7 @@ const Announcements: React.FC = () => {
       setIsEditing(false);
       alert('Updated successfully.');
     } catch (err: any) {
-      console.error('Update failed', err);
+      console.error('Update failed:', err);
       alert(err.response?.data?.error || err.message);
     } finally {
       setEditLoading(false);

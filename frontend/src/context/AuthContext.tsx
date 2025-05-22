@@ -55,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       const apiUrl = import.meta.env.VITE_BACKEND_API_URL;
       const response = await axios.post(
-        `${apiUrl.replace(/\/+$/, '')}/api/auth/login`, {
+        `${apiUrl.replace(/\/+$/, '')}/auth/login`, {
         phone_number: phoneNumber,
         password,
         role,

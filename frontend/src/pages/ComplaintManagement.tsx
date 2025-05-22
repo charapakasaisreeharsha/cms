@@ -9,7 +9,7 @@ import { MessageSquare, Filter, Plus, Search, X } from 'lucide-react';
 // Utility function for API URLs
 const getApiUrl = (endpoint: string) => {
   const baseUrl = import.meta.env.VITE_BACKEND_API_URL.replace(/\/+$/, '');
-  return `${baseUrl}/api${endpoint}`;
+  return `${baseUrl}${endpoint}`;
 };
 
 interface Complaint {

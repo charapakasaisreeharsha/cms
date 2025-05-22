@@ -49,7 +49,7 @@ const Login: React.FC = () => {
         await login(phoneNumber, password, role);
       } else {
         const apiBase = import.meta.env.VITE_BACKEND_API_URL.replace(/\/+$/, '');
-        const signupUrl = `${apiBase}/api/auth/signup`;
+        const signupUrl = `${apiBase}/auth/signup`;
         console.log('Calling signup:', signupUrl);
         const payload: any = {
           phone_number: phoneNumber,

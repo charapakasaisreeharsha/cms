@@ -11,7 +11,7 @@ interface NotificationItem {
   description: string;
   date: string;
   link: string;
-  number?: number; // for numbering unread notifications
+  number?: number;
 }
 
 interface HeaderProps {
@@ -30,78 +30,42 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
   useEffect(() => {
     const fetchNotifications = async () => {
-      try {
-        const apiUrl = import.meta.env.VITE_BACKEND_API_URL.replace('/auth', '');
-
-        // Fetch recent announcements
-        const announcementsRes = await axios.get(`${apiUrl}/announcements?limit=10`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('societyToken')}` },
-        });
-
-        let complaintNotifications: NotificationItem[] = [];
-
-        // Fetch complaints only if user is admin or resident and token exists
-        const token = localStorage.getItem('societyToken');
-        if ((user?.role === 'admin' || user?.role === 'resident') && token) {
-          const complaintsRes = await axios.get(`${apiUrl}/complaints?status=open`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const recentComplaints = complaintsRes.data.slice(0, 10);
-          complaintNotifications = recentComplaints.map((c: any) => ({
-            id: `complaint-${c.id}`,
-            type: 'complaint',
-            title: c.title,
-            description: c.description,
-            date: c.date || '',
-            link: '/complaints',
-          }));
-        }
-
-        const announcementNotifications: NotificationItem[] = announcementsRes.data.map((a: any) => ({
-          id: `announcement-${a.id}`,
-          type: 'announcement',
-          title: a.title,
-          description: a.content,
-          date: a.date || '',
-          link: '/announcements',
-        }));
-
-        let combinedNotifications = [...announcementNotifications, ...complaintNotifications];
-
-        // Sort by date descending (most recent first)
-        combinedNotifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        // Limit to 10 notifications
-        combinedNotifications = combinedNotifications.slice(0, 10);
-
-        // Assign numbering starting from 1 for unread notifications
-        let number = 1;
-        const numberedNotifications = combinedNotifications.map((notif) => {
-          if (!readNotificationIds.has(notif.id)) {
-            return { ...notif, number: number++ };
-          }
-          return { ...notif };
-        });
-
-        setNotifications(numberedNotifications);
-      } catch (error) {
-        console.error('Failed to fetch notifications:', error);
-      }
-    };
+  try {
+    const apiUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:5000/api';
+    const token = localStorage.getItem('societyToken');
+    if (!token) throw new Error('No token found');
+    const announcementsRes = await axios.get(`${apiUrl}/announcements?limit=10`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setNotifications(announcementsRes.data.map(item => ({
+      id: item.id,
+      title: item.title,
+      description: item.content,
+      timestamp: new Date(item.date).getTime(),
+      type: 'announcement',
+    })));
+  } catch (error) {
+    console.error('Failed to fetch notifications:', error);
+    if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+      localStorage.removeItem('societyToken');
+      window.location.href = '/login';
+    }
+    setNotifications([]);
+  }
+};
 
     fetchNotifications();
-
-    // Optionally, refresh notifications every 5 minutes
     const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [user, readNotificationIds]);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        notificationRef.current && !notificationRef.current.contains(event.target as Node) &&
-        profileRef.current && !profileRef.current.contains(event.target as Node)
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target as Node) &&
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
       ) {
         setShowNotifications(false);
         setShowProfileMenu(false);
@@ -111,19 +75,17 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Calculate unread notifications count
-  const unreadCount = notifications.filter(n => !readNotificationIds.has(n.id)).length;
+  const unreadCount = notifications.filter((n) => !readNotificationIds.has(n.id)).length;
 
   const handleNotificationClick = (link: string, id: string) => {
     setShowNotifications(false);
-    setReadNotificationIds(prev => new Set(prev).add(id));
+    setReadNotificationIds((prev) => new Set(prev).add(id));
     navigate(link);
   };
 
-  // Mark all notifications as read when opening the popup
   const handleToggleNotifications = () => {
     if (!showNotifications) {
-      const allIds = notifications.map(n => n.id);
+      const allIds = notifications.map((n) => n.id);
       setReadNotificationIds(new Set(allIds));
     }
     setShowNotifications(!showNotifications);
@@ -147,7 +109,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
       </div>
 
       <div className="flex items-center space-x-4">
-        {/* Notification bell */}
         <div className="relative" ref={notificationRef}>
           <button
             className="p-1 text-gray-600 transition-colors rounded-full hover:bg-gray-100 focus:outline-none"
@@ -166,9 +127,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
           {showNotifications && (
             <div className="absolute right-0 w-80 mt-2 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 max-h-96 overflow-y-auto z-50">
-              <div className="p-4 border-b border-gray-200 font-semibold text-gray-700">
-                Recent Notifications
-              </div>
+              <div className="p-4 border-b border-gray-200 font-semibold text-gray-700">Recent Notifications</div>
               {notifications.length === 0 ? (
                 <div className="p-4 text-gray-500">No new notifications</div>
               ) : (
@@ -188,7 +147,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                           )}
                           <p className="font-medium text-gray-900">{notification.title}</p>
                         </div>
-                        <span className="text-xs text-gray-500">{new Date(notification.date).toLocaleDateString()}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(notification.date).toLocaleDateString()}
+                        </span>
                       </div>
                       <p className="text-sm text-gray-600 truncate">{notification.description}</p>
                     </li>
@@ -199,7 +160,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           )}
         </div>
 
-        {/* Profile dropdown */}
         <div className="relative" ref={profileRef}>
           <button
             className="flex items-center p-1 space-x-2 text-gray-600 transition-colors rounded-full hover:bg-gray-100 focus:outline-none"
@@ -217,7 +177,9 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           {showProfileMenu && (
             <div className="absolute right-0 w-48 mt-2 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5">
               <div className="py-1">
-                <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</Link>
+                <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  Profile
+                </Link>
                 <button
                   onClick={logout}
                   className="block w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100"
