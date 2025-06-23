@@ -51,7 +51,12 @@ const Dashboard: React.FC = () => {
 
   const fetchAnnouncements = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/announcements');
+      const res = await fetch('http://localhost:5000/api/announcements', {
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem('societyToken')}`,
+  },
+});
+
       const data: Announcement[] = await res.json();
       setAnnouncements(data);
     } catch (err) {

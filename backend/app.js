@@ -1,5 +1,4 @@
-// app.js
-const express = require('express');
+ const express = require('express');
 const cors = require('cors');
 const listEndpoints = require('express-list-endpoints');
 require('dotenv').config();
